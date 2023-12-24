@@ -6,6 +6,8 @@ This is a CLI music player, It can play local music or remote stream and it can
 output the sound to the local sound server or as an HTTP stream. This is a
 standalone project but it also has a [Web Client](https://codeberg.org/aleidk/fuuka) with further features.
 
+This project is currently in **development**, to see the progress towards the next release [check the milestone](https://codeberg.org/aleidk/juno/milestone/5195).
+
 ## Features
 
 - Play local files or remote streams (like youtube streams).
