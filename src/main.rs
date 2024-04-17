@@ -1,8 +1,8 @@
-use ignore::types::TypesBuilder;
-use ignore::WalkBuilder;
-use std::{env, io, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use clap::Parser;
+
+mod file_explorer;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -11,37 +11,13 @@ struct Args {
     path: Option<PathBuf>,
 }
 
-fn walk_dir(path: &PathBuf) -> io::Result<()> {
-    let mut types_builder = TypesBuilder::new();
-    types_builder.add_defaults();
-
-    let accepted_filetypes = ["mp3", "flac"];
-
-    for filetype in accepted_filetypes {
-        let _ = types_builder.add("sound", format!("*.{}", filetype).as_str());
-    }
-
-    types_builder.select("sound");
-
-    let entries = WalkBuilder::new(path)
-        .types(types_builder.build().unwrap())
-        .build()
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| !entry.path().is_dir());
-
-    for result in entries {
-        let path = result.path();
-
-        println!("{}", path.display());
-    }
-    Ok(())
-}
-
 fn main() {
     let cli = Args::parse();
     let path = cli
         .path
         .unwrap_or(env::current_dir().expect("Current directory is not available."));
 
-    walk_dir(&path).expect("error");
+    let files = file_explorer::walk_dir(&path).expect("error");
+
+    eprintln!("DEBUGPRINT[4]: main.rs:20: files={:#?}", files);
 }
