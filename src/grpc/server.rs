@@ -1,6 +1,6 @@
-use super::hello_world;
-use hello_world::greater_server::{Greater, GreaterServer};
-use hello_world::{HelloRequest, HelloResponse};
+use super::grpc_juno;
+use grpc_juno::juno_request_server::{JunoRequest, JunoRequestServer};
+use grpc_juno::{PingRequestMessage, PingResponseMessage};
 use std::error::Error;
 use std::net::SocketAddr;
 use tonic::transport::Server;
@@ -18,15 +18,13 @@ impl GRPCServer {
 }
 
 #[tonic::async_trait]
-impl Greater for GRPCServer {
-    async fn say_hello(
+impl JunoRequest for GRPCServer {
+    async fn ping(
         &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<HelloResponse>, Status> {
-        println!("Got a request {:?}", request);
-
-        let reply = hello_world::HelloResponse {
-            message: format!("Hello {}!", request.into_inner().name),
+        _request: Request<PingRequestMessage>,
+    ) -> Result<Response<PingResponseMessage>, Status> {
+        let reply = PingResponseMessage {
+            message: "pong!".to_string(),
         };
 
         Ok(Response::new(reply))
@@ -41,7 +39,7 @@ impl super::Connection for GRPCServer {
         let socket: SocketAddr = self.address.parse()?;
 
         Server::builder()
-            .add_service(GreaterServer::new(GRPCServer::default()))
+            .add_service(JunoRequestServer::new(GRPCServer::default()))
             .serve(socket)
             .await?;
 

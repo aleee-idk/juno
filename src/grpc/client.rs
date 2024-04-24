@@ -1,8 +1,9 @@
-use super::hello_world;
+use super::grpc_juno;
 
-use hello_world::greater_client::GreaterClient;
-use hello_world::HelloRequest;
+use grpc_juno::juno_request_client::JunoRequestClient;
+use grpc_juno::PingRequestMessage;
 use tonic::async_trait;
+use tonic::Request;
 
 #[derive(Debug, Default)]
 pub struct GRPCClient {
@@ -18,13 +19,11 @@ impl GRPCClient {
 #[async_trait]
 impl super::Connection for GRPCClient {
     async fn connect(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut client = GreaterClient::connect(format!("http://{}", self.address)).await?;
+        let mut client = JunoRequestClient::connect(format!("http://{}", self.address)).await?;
 
-        let request = tonic::Request::new(HelloRequest {
-            name: "Self".into(),
-        });
+        let request = Request::new(PingRequestMessage {});
 
-        let response = client.say_hello(request).await?;
+        let response = client.ping(request).await?;
 
         println!("RESPONSE={:?}", response);
 

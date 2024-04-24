@@ -9,8 +9,8 @@ use self::server::GRPCServer;
 mod client;
 mod server;
 
-pub mod hello_world {
-    tonic::include_proto!("helloworld");
+pub mod grpc_juno {
+    tonic::include_proto!("juno");
 }
 
 #[async_trait]

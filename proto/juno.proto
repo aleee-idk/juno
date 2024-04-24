@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package juno;
+
+service JunoRequest {
+  rpc Ping (PingRequestMessage) returns (PingResponseMessage);
+}
+
+message PingRequestMessage {
+}
+
+message PingResponseMessage {
+  string message = 1;
+}
