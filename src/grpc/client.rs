@@ -1,7 +1,7 @@
 use super::grpc_juno;
 
 use grpc_juno::juno_request_client::JunoRequestClient;
-use grpc_juno::PingRequestMessage;
+use grpc_juno::GetFilesRequest;
 use tonic::async_trait;
 use tonic::Request;
 
@@ -21,11 +21,13 @@ impl super::Connection for GRPCClient {
     async fn connect(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut client = JunoRequestClient::connect(format!("http://{}", self.address)).await?;
 
-        let request = Request::new(PingRequestMessage {});
+        let request = Request::new(GetFilesRequest {
+            path: "/home/aleidk/Music/".to_string(),
+        });
 
-        let response = client.ping(request).await?;
+        let response = client.get_files(request).await?.into_inner();
 
-        println!("RESPONSE={:?}", response);
+        println!("RESPONSE={:?}", response.files);
 
         Ok(())
     }
