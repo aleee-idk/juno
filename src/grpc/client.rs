@@ -22,7 +22,7 @@ impl super::Connection for GRPCClient {
         let mut client = JunoRequestClient::connect(format!("http://{}", self.address)).await?;
 
         let request = Request::new(GetFilesRequest {
-            path: "/home/aleidk/Music/".to_string(),
+            path: "/home/aleidk/Documents/".to_string(),
         });
 
         let response = client.get_files(request).await?.into_inner();

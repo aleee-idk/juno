@@ -43,9 +43,8 @@ impl JunoRequest for GRPCServer {
 
         let files = match file_explorer::walk_dir(&path) {
             Ok(files) => files,
-            Err(_err) => panic!("Error reading path: {:?}", path),
+            Err(err) => return Err(Status::invalid_argument(err)),
         };
-        eprintln!("DEBUGPRINT[2]: server.rs:44: files={:#?}", files);
 
         let reply = GetFilesResponse {
             files: files.iter().map(|x| x.display().to_string()).collect(),
