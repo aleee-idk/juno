@@ -1,23 +1,14 @@
-use std::{env, path::PathBuf};
+use std::error::Error;
 
-use clap::Parser;
-
+mod configuration;
 mod file_explorer;
+mod grpc;
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(help = "Directory to scan for files")]
-    path: Option<PathBuf>,
-}
+#[tokio::main()]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let server = grpc::run()?;
 
-fn main() {
-    let cli = Args::parse();
-    let path = cli
-        .path
-        .unwrap_or(env::current_dir().expect("Current directory is not available."));
+    server.connect().await?;
 
-    let files = file_explorer::walk_dir(&path).expect("error");
-
-    eprintln!("DEBUGPRINT[4]: main.rs:20: files={:#?}", files);
+    Ok(())
 }

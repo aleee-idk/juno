@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package juno;
+
+service JunoRequest {
+  rpc Ping (PingRequestMessage) returns (PingResponseMessage);
+  rpc GetFiles (GetFilesRequest) returns (GetFilesResponse);
+}
+
+message PingRequestMessage {
+}
+
+message PingResponseMessage {
+  string message = 1;
+}
+
+message GetFilesRequest {
+  string path = 1;
+}
+
+message GetFilesResponse {
+  repeated string files = 1;
+}
