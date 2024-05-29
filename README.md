@@ -48,6 +48,24 @@ The project was split into 2 though:
 - [Fuuka](https://megamitensei.fandom.com/wiki/Fuuka_Yamagishi), the navi of SEES in Persona 3, you can ask her to change the musing in tartarus. It act as the frontend to interact with the player.
 - [Juno](https://megamitensei.fandom.com/wiki/Juno), the persona of Fuuka that grants her the ability to communicate telepatically to her teamates. It act as the music player.
 
+## Contributing
+
+Aside from rust and cargo, you need the following dependencies:
+
+- alsa-lib devel package
+```bash
+# fedora
+dnf install -y alsa-lib-devel
+
+```
+
+- Tonic protobuf dependencies
+```bash
+# fedora
+dnf install -y protobuf-devel
+
+```
+
 ## Similar projects
 
 - [Navidrome](https://www.navidrome.org)

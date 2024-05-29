@@ -1,33 +1,55 @@
-use crate::file_explorer;
+use crate::configuration::CONFIG;
+use crate::{file_explorer, PlayerAction};
 
 use super::grpc_juno;
-use grpc_juno::juno_request_server::{JunoRequest, JunoRequestServer};
-use grpc_juno::{GetFilesRequest, GetFilesResponse, PingRequestMessage, PingResponseMessage};
+use grpc_juno::juno_services_server::{JunoServices, JunoServicesServer};
+use grpc_juno::{EmptyRequest, GetFilesRequest, GetFilesResponse, PingResponse, StatusResponse};
 use std::error::Error;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use tokio::sync::mpsc::Sender;
 use tonic::transport::Server;
 use tonic::{async_trait, Request, Response, Result, Status};
 
 #[derive(Debug, Default)]
 pub struct GRPCServer {
-    address: String,
+    transmitter: Option<Sender<PlayerAction>>,
 }
 
 impl GRPCServer {
-    pub fn new(address: String) -> Self {
-        Self { address }
+    pub fn new(tx: Sender<PlayerAction>) -> Self {
+        Self {
+            transmitter: Some(tx),
+        }
+    }
+
+    async fn send_message(&self, message: PlayerAction) -> Result<(), Box<dyn Error>> {
+        if let Some(tx) = &self.transmitter {
+            tx.send(message).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn serve(tx: Sender<PlayerAction>) -> Result<(), Box<dyn Error>> {
+        println!("Starting server on: \"{}\"", CONFIG.address.to_string());
+
+        Server::builder()
+            .add_service(JunoServicesServer::new(GRPCServer::new(tx)))
+            .serve(CONFIG.address)
+            .await?;
+
+        Ok(())
     }
 }
 
 #[tonic::async_trait]
-impl JunoRequest for GRPCServer {
+impl JunoServices for GRPCServer {
     async fn ping(
         &self,
-        _request: Request<PingRequestMessage>,
-    ) -> Result<Response<PingResponseMessage>, Status> {
-        let reply = PingResponseMessage {
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<PingResponse>, Status> {
+        let reply = PingResponse {
             message: "pong!".to_string(),
         };
 
@@ -52,18 +74,27 @@ impl JunoRequest for GRPCServer {
 
         Ok(Response::new(reply))
     }
+
+    async fn skip_song(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<StatusResponse>, Status> {
+        if let Err(_err) = self.send_message(PlayerAction::SkipSong).await {
+            return Err(Status::internal("An internal error has occurred."));
+        }
+
+        Ok(Response::new(StatusResponse {}))
+    }
 }
 
 #[async_trait]
 impl super::Connection for GRPCServer {
     async fn connect(&self) -> Result<(), Box<dyn Error>> {
-        println!("Starting server on: \"{}\"", self.address);
-
-        let socket: SocketAddr = self.address.parse()?;
+        println!("Starting server on: \"{}\"", CONFIG.address.to_string());
 
         Server::builder()
-            .add_service(JunoRequestServer::new(GRPCServer::default()))
-            .serve(socket)
+            .add_service(JunoServicesServer::new(GRPCServer::default()))
+            .serve(CONFIG.address)
             .await?;
 
         Ok(())
