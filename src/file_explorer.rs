@@ -17,10 +17,6 @@ pub fn walk_dir(path: &PathBuf) -> Result<Vec<PathBuf>, &str> {
     types_builder.select("sound");
 
     let search_path = CONFIG.base_path.join(path);
-    eprintln!(
-        "DEBUGPRINT[1]: file_explorer.rs:19: search_path={:#?}",
-        search_path
-    );
 
     // PathBuf.join() can override the hole path, this ensure we're not accessing files outside
     // base_dir

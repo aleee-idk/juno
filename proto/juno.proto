@@ -2,15 +2,21 @@ syntax = "proto3";
 
 package juno;
 
-service JunoRequest {
-  rpc Ping (PingRequestMessage) returns (PingResponseMessage);
+service JunoServices {
+  rpc Ping (EmptyRequest) returns (PingResponse);
   rpc GetFiles (GetFilesRequest) returns (GetFilesResponse);
+  rpc SkipSong (EmptyRequest) returns (StatusResponse);
 }
 
-message PingRequestMessage {
+message EmptyRequest {
 }
 
-message PingResponseMessage {
+// TODO: add an enmurator and a "message" so this act as a generic response to
+// services that don't need to return valuable data
+message StatusResponse {
+}
+
+message PingResponse {
   string message = 1;
 }
 
@@ -21,3 +27,4 @@ message GetFilesRequest {
 message GetFilesResponse {
   repeated string files = 1;
 }
+
