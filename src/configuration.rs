@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
 use std::env;
 use std::net::SocketAddr;
@@ -17,13 +17,26 @@ pub enum ConfigMode {
     Client,
 }
 
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    Start {
+        #[arg(help = "Directory to scan for files")]
+        path: Option<PathBuf>,
+    },
+    Play,
+    SkipSong,
+    Set,
+}
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(help = "Directory to scan for files")]
-    path: Option<PathBuf>,
+    #[command(subcommand)]
+    cmd: Commands,
+
     #[arg(short, long, help = "the port to bind to", default_value = "50051")]
     port: u16,
+
     #[arg(
         long,
         help = "The value 1.0 is the “normal” volume. Any value other than 1.0 will multiply each sample by this value.",
@@ -34,6 +47,7 @@ struct Args {
 
 #[derive(Debug)]
 pub struct Config {
+    pub command: Commands,
     pub base_path: PathBuf,
     pub address: SocketAddr,
     pub mode: ConfigMode,
@@ -43,6 +57,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
+            command: Commands::Play,
             base_path: env::current_dir().expect("Current directory is not available."),
             mode: ConfigMode::Server,
             address: SocketAddr::from_str("[::1]:50051").unwrap(),
@@ -57,9 +72,12 @@ impl Config {
         let mut config = Self::default();
         config.address = SocketAddr::from_str(format!("[::1]:{}", cli.port).as_str()).unwrap();
         config.volume = cli.volume;
+        config.command = cli.cmd.to_owned();
 
-        if let Some(path) = cli.path {
-            config.base_path = path;
+        if let Commands::Start { path } = cli.cmd {
+            if let Some(path) = path {
+                config.base_path = path;
+            }
         }
 
         if grpc::is_socket_in_use(config.address) {

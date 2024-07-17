@@ -86,17 +86,3 @@ impl JunoServices for GRPCServer {
         Ok(Response::new(StatusResponse {}))
     }
 }
-
-#[async_trait]
-impl super::Connection for GRPCServer {
-    async fn connect(&self) -> Result<(), Box<dyn Error>> {
-        println!("Starting server on: \"{}\"", CONFIG.address.to_string());
-
-        Server::builder()
-            .add_service(JunoServicesServer::new(GRPCServer::default()))
-            .serve(CONFIG.address)
-            .await?;
-
-        Ok(())
-    }
-}

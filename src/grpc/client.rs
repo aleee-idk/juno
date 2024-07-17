@@ -12,24 +12,6 @@ use tonic::Request;
 #[derive(Debug, Default)]
 pub struct GRPCClient {}
 
-#[async_trait]
-impl super::Connection for GRPCClient {
-    async fn connect(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut client =
-            JunoServicesClient::connect(format!("http://{}", CONFIG.address.to_string())).await?;
-
-        let request = Request::new(GetFilesRequest {
-            path: CONFIG.base_path.display().to_string(),
-        });
-
-        let response = client.get_files(request).await?.into_inner();
-
-        println!("RESPONSE={:?}", response.files);
-
-        Ok(())
-    }
-}
-
 impl GRPCClient {
     async fn get_client(&self) -> Result<JunoServicesClient<Channel>, Box<dyn std::error::Error>> {
         let client =
@@ -58,6 +40,20 @@ impl GRPCClient {
         let response = client.skip_song(request).await?.into_inner();
 
         println!("RESPONSE={:?}", response);
+
+        Ok(())
+    }
+
+    pub async fn list_files(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut client = self.get_client().await?;
+
+        let request = Request::new(GetFilesRequest {
+            path: CONFIG.base_path.display().to_string(),
+        });
+
+        let response = client.get_files(request).await?.into_inner();
+
+        println!("RESPONSE={:?}", response.files);
 
         Ok(())
     }

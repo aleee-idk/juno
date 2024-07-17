@@ -106,12 +106,4 @@ impl Player {
             self.sink.pause();
         };
     }
-
-    fn set_playback_state(&self, is_paused: bool) {
-        if is_paused {
-            self.sink.pause();
-        } else {
-            self.sink.play();
-        };
-    }
 }
