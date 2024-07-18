@@ -9,6 +9,7 @@ use rodio::{OutputStream, Sink};
 use crate::configuration::{self, CONFIG};
 use crate::file_explorer::walk_dir;
 
+#[allow(dead_code)]
 pub struct Player {
     queue: VecDeque<PathBuf>,
     sink: Sink,
@@ -26,6 +27,7 @@ impl std::ops::Deref for Player {
 impl Player {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let queue = walk_dir(None)?;
+        // stream needs to exist as long as sink to work
         let (stream, stream_handle) = OutputStream::try_default()?;
         let sink = Sink::try_new(&stream_handle)?;
         sink.set_volume(CONFIG.volume);

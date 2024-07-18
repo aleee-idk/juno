@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
-use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;

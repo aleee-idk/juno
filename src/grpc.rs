@@ -1,7 +1,5 @@
-use std::error::Error;
 use std::net::{SocketAddr, TcpListener};
 
-use tonic::async_trait;
 
 pub use self::client::GRPCClient;
 pub use self::server::GRPCServer;
