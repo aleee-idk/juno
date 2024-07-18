@@ -1,29 +1,29 @@
-use crate::configuration::CONFIG;
-use crate::{file_explorer, PlayerAction};
+use crate::configuration::{Commands, CONFIG};
+use crate::file_explorer;
 
 use super::grpc_juno;
 use grpc_juno::juno_services_server::{JunoServices, JunoServicesServer};
-use grpc_juno::{EmptyRequest, GetFilesRequest, GetFilesResponse, PingResponse, StatusResponse};
+use grpc_juno::{EmptyRequest, EmptyResponse, GetFilesRequest, GetFilesResponse, PingResponse};
 use std::error::Error;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tokio::sync::mpsc::Sender;
 use tonic::transport::Server;
-use tonic::{async_trait, Request, Response, Result, Status};
+use tonic::{Request, Response, Result, Status};
 
 #[derive(Debug, Default)]
 pub struct GRPCServer {
-    transmitter: Option<Sender<PlayerAction>>,
+    transmitter: Option<Sender<Commands>>,
 }
 
 impl GRPCServer {
-    pub fn new(tx: Sender<PlayerAction>) -> Self {
+    pub fn new(tx: Sender<Commands>) -> Self {
         Self {
             transmitter: Some(tx),
         }
     }
 
-    async fn send_message(&self, message: PlayerAction) -> Result<(), Box<dyn Error>> {
+    async fn send_message(&self, message: Commands) -> Result<(), Box<dyn Error>> {
         if let Some(tx) = &self.transmitter {
             tx.send(message).await?;
         }
@@ -31,7 +31,7 @@ impl GRPCServer {
         Ok(())
     }
 
-    pub async fn serve(tx: Sender<PlayerAction>) -> Result<(), Box<dyn Error>> {
+    pub async fn serve(tx: Sender<Commands>) -> Result<(), Box<dyn Error>> {
         println!("Starting server on: \"{}\"", CONFIG.address.to_string());
 
         Server::builder()
@@ -63,7 +63,7 @@ impl JunoServices for GRPCServer {
         let path = PathBuf::from_str(request.into_inner().path.as_str())
             .expect("Failed to create pathbuf");
 
-        let files = match file_explorer::walk_dir(&path) {
+        let files = match file_explorer::walk_dir(Some(&path)) {
             Ok(files) => files,
             Err(err) => return Err(Status::invalid_argument(err)),
         };
@@ -75,14 +75,47 @@ impl JunoServices for GRPCServer {
         Ok(Response::new(reply))
     }
 
-    async fn skip_song(
+    async fn play(
         &self,
         _request: Request<EmptyRequest>,
-    ) -> Result<Response<StatusResponse>, Status> {
-        if let Err(_err) = self.send_message(PlayerAction::SkipSong).await {
+    ) -> Result<Response<EmptyResponse>, Status> {
+        if let Err(_err) = self.send_message(Commands::Play).await {
             return Err(Status::internal("An internal error has occurred."));
         }
 
-        Ok(Response::new(StatusResponse {}))
+        Ok(Response::new(EmptyResponse {}))
+    }
+
+    async fn pause(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        if let Err(_err) = self.send_message(Commands::Pause).await {
+            return Err(Status::internal("An internal error has occurred."));
+        }
+
+        Ok(Response::new(EmptyResponse {}))
+    }
+
+    async fn play_pause(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        if let Err(_err) = self.send_message(Commands::PlayPause).await {
+            return Err(Status::internal("An internal error has occurred."));
+        }
+
+        Ok(Response::new(EmptyResponse {}))
+    }
+
+    async fn skip_song(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        if let Err(_err) = self.send_message(Commands::SkipSong).await {
+            return Err(Status::internal("An internal error has occurred."));
+        }
+
+        Ok(Response::new(EmptyResponse {}))
     }
 }

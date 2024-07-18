@@ -6,8 +6,7 @@ use tokio::sync::mpsc;
 
 use crate::player::Player;
 
-use self::configuration::{ConfigMode, CONFIG};
-use self::player::PlayerAction;
+use self::configuration::{Commands, ConfigMode, CONFIG};
 
 mod configuration;
 mod file_explorer;
@@ -15,7 +14,7 @@ mod grpc;
 mod player;
 
 async fn init_server() -> Result<(), Box<dyn Error>> {
-    let (tx, mut rx) = mpsc::channel::<PlayerAction>(32);
+    let (tx, mut rx) = mpsc::channel::<Commands>(32);
 
     tokio::spawn(async move {
         let _ = grpc::GRPCServer::serve(tx).await;
@@ -52,7 +51,20 @@ async fn init_server() -> Result<(), Box<dyn Error>> {
 
 async fn init_client() -> Result<(), Box<dyn Error>> {
     let client = grpc::GRPCClient::default();
-    let _ = client.skip_song().await;
+
+    match &CONFIG.command {
+        Commands::Play => client.play().await?,
+        Commands::Pause => client.pause().await?,
+        Commands::PlayPause => client.play_pause().await?,
+        Commands::SkipSong => client.skip_song().await?,
+        Commands::Set => todo!(),
+        Commands::GetFiles { path: _ } => client.get_files().await?,
+        Commands::Ping => client.ping().await?,
+        _ => {
+            println!("This command doesn't apply to client mode")
+        }
+    }
+
     Ok(())
 }
 

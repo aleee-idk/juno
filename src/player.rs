@@ -6,15 +6,8 @@ use std::path::PathBuf;
 
 use rodio::{OutputStream, Sink};
 
-use crate::configuration::CONFIG;
+use crate::configuration::{self, CONFIG};
 use crate::file_explorer::walk_dir;
-
-#[derive(Debug)]
-pub enum PlayerAction {
-    Play,
-    SkipSong,
-    Set,
-}
 
 pub struct Player {
     queue: VecDeque<PathBuf>,
@@ -32,10 +25,11 @@ impl std::ops::Deref for Player {
 
 impl Player {
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        let queue = walk_dir(&CONFIG.base_path)?;
+        let queue = walk_dir(None)?;
         let (stream, stream_handle) = OutputStream::try_default()?;
         let sink = Sink::try_new(&stream_handle)?;
         sink.set_volume(CONFIG.volume);
+
         Ok(Player {
             queue: VecDeque::from(queue),
             sink,
@@ -43,12 +37,20 @@ impl Player {
         })
     }
 
-    pub fn handle_message(&mut self, message: PlayerAction) -> Result<(), Box<dyn Error>> {
+    pub fn handle_message(
+        &mut self,
+        message: configuration::Commands,
+    ) -> Result<(), Box<dyn Error>> {
         match message {
-            PlayerAction::Play => self.play()?,
-            PlayerAction::SkipSong => self.skip_song()?,
-            PlayerAction::Set => unimplemented!(),
-        }
+            configuration::Commands::Play => self.play(),
+            configuration::Commands::Pause => self.pause(),
+            configuration::Commands::PlayPause => self.play_pause(),
+            configuration::Commands::SkipSong => self.skip_song()?,
+            configuration::Commands::Set => todo!(),
+            _ => {
+                println!("This command doesn't apply to client mode")
+            }
+        };
 
         Ok(())
     }
@@ -76,10 +78,20 @@ impl Player {
         Ok(())
     }
 
-    fn play(&mut self) -> Result<(), Box<dyn Error>> {
+    fn play(&mut self) {
         self.sink.play();
+    }
 
-        Ok(())
+    fn pause(&mut self) {
+        self.sink.pause();
+    }
+
+    fn play_pause(&self) {
+        if self.sink.is_paused() {
+            self.sink.play();
+        } else {
+            self.sink.pause();
+        };
     }
 
     fn skip_song(&mut self) -> Result<(), Box<dyn Error>> {
@@ -97,13 +109,5 @@ impl Player {
 
         self.sink.append(rodio::Decoder::new(BufReader::new(file))?);
         Ok(())
-    }
-
-    fn _play_pause(&self) {
-        if self.sink.is_paused() {
-            self.sink.play();
-        } else {
-            self.sink.pause();
-        };
     }
 }

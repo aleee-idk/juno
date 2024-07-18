@@ -19,13 +19,30 @@ pub enum ConfigMode {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
+    /// Start the GRPC server
     Start {
-        #[arg(help = "Directory to scan for files")]
-        path: Option<PathBuf>,
+        #[arg(help = "Directory to scan for files", default_value = ".")]
+        base_path: PathBuf,
     },
+    /// Resume the playback
     Play,
+    /// Pause the playback
+    Pause,
+    /// Resume the playback if pause, pause if is playing
+    PlayPause,
+    /// Skip the current song
     SkipSong,
     Set,
+    /// List the available files
+    GetFiles {
+        #[arg(
+            help = "Directory to scan for files, relative to server base path",
+            default_value = "."
+        )]
+        path: PathBuf,
+    },
+    /// Test server connection
+    Ping,
 }
 
 #[derive(Parser)]
@@ -48,7 +65,6 @@ struct Args {
 #[derive(Debug)]
 pub struct Config {
     pub command: Commands,
-    pub base_path: PathBuf,
     pub address: SocketAddr,
     pub mode: ConfigMode,
     pub volume: f32,
@@ -58,7 +74,6 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             command: Commands::Play,
-            base_path: env::current_dir().expect("Current directory is not available."),
             mode: ConfigMode::Server,
             address: SocketAddr::from_str("[::1]:50051").unwrap(),
             volume: 1.0,
@@ -72,13 +87,7 @@ impl Config {
         let mut config = Self::default();
         config.address = SocketAddr::from_str(format!("[::1]:{}", cli.port).as_str()).unwrap();
         config.volume = cli.volume;
-        config.command = cli.cmd.to_owned();
-
-        if let Commands::Start { path } = cli.cmd {
-            if let Some(path) = path {
-                config.base_path = path;
-            }
-        }
+        config.command = cli.cmd;
 
         if grpc::is_socket_in_use(config.address) {
             config.mode = ConfigMode::Client;

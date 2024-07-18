@@ -5,15 +5,21 @@ package juno;
 service JunoServices {
   rpc Ping (EmptyRequest) returns (PingResponse);
   rpc GetFiles (GetFilesRequest) returns (GetFilesResponse);
-  rpc SkipSong (EmptyRequest) returns (StatusResponse);
+  rpc SkipSong (EmptyRequest) returns (EmptyResponse);
+  rpc Play (EmptyRequest) returns (EmptyResponse);
+  rpc Pause (EmptyRequest) returns (EmptyResponse);
+  rpc PlayPause (EmptyRequest) returns (EmptyResponse);
+}
+
+enum Status {
+  SUCCESS = 0;
+  ERROR = 1;
 }
 
 message EmptyRequest {
 }
 
-// TODO: add an enmurator and a "message" so this act as a generic response to
-// services that don't need to return valuable data
-message StatusResponse {
+message EmptyResponse {
 }
 
 message PingResponse {
@@ -27,4 +33,3 @@ message GetFilesRequest {
 message GetFilesResponse {
   repeated string files = 1;
 }
-

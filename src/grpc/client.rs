@@ -1,11 +1,12 @@
-use crate::configuration::CONFIG;
+use core::panic;
+
+use crate::configuration::{Commands, CONFIG};
 use crate::grpc::grpc_juno::EmptyRequest;
 
 use super::grpc_juno;
 
 use grpc_juno::juno_services_client::JunoServicesClient;
 use grpc_juno::GetFilesRequest;
-use tonic::async_trait;
 use tonic::transport::Channel;
 use tonic::Request;
 
@@ -32,6 +33,42 @@ impl GRPCClient {
         Ok(())
     }
 
+    pub async fn play(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut client = self.get_client().await?;
+
+        let request = Request::new(EmptyRequest {});
+
+        let response = client.play(request).await?.into_inner();
+
+        println!("RESPONSE={:?}", response);
+
+        Ok(())
+    }
+
+    pub async fn pause(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut client = self.get_client().await?;
+
+        let request = Request::new(EmptyRequest {});
+
+        let response = client.pause(request).await?.into_inner();
+
+        println!("RESPONSE={:?}", response);
+
+        Ok(())
+    }
+
+    pub async fn play_pause(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut client = self.get_client().await?;
+
+        let request = Request::new(EmptyRequest {});
+
+        let response = client.play_pause(request).await?.into_inner();
+
+        println!("RESPONSE={:?}", response);
+
+        Ok(())
+    }
+
     pub async fn skip_song(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut client = self.get_client().await?;
 
@@ -44,17 +81,21 @@ impl GRPCClient {
         Ok(())
     }
 
-    pub async fn list_files(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn get_files(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut client = self.get_client().await?;
 
-        let request = Request::new(GetFilesRequest {
-            path: CONFIG.base_path.display().to_string(),
-        });
+        if let Commands::GetFiles { path } = &CONFIG.command {
+            let request = Request::new(GetFilesRequest {
+                path: path.display().to_string(),
+            });
 
-        let response = client.get_files(request).await?.into_inner();
+            let response = client.get_files(request).await?.into_inner();
 
-        println!("RESPONSE={:?}", response.files);
+            println!("RESPONSE={:?}", response.files);
 
-        Ok(())
+            return Ok(());
+        };
+
+        panic!("Error");
     }
 }
