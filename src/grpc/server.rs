@@ -1,42 +1,65 @@
-use crate::configuration::{Commands, CONFIG};
-use crate::file_explorer;
+use crate::configuration::Commands;
 
 use super::grpc_juno;
 use grpc_juno::juno_services_server::{JunoServices, JunoServicesServer};
 use grpc_juno::{EmptyRequest, EmptyResponse, GetFilesRequest, GetFilesResponse, PingResponse};
 use std::error::Error;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot;
 use tonic::transport::Server;
 use tonic::{Request, Response, Result, Status};
 
+type Responder<T> = oneshot::Sender<T>;
+
+#[derive(Debug)]
+pub struct GrpcServerMessage {
+    pub command: Commands,
+    pub responder: Responder<()>,
+}
+
 #[derive(Debug, Default)]
 pub struct GRPCServer {
-    transmitter: Option<Sender<Commands>>,
+    transmitter: Option<Sender<GrpcServerMessage>>,
 }
 
 impl GRPCServer {
-    pub fn new(tx: Sender<Commands>) -> Self {
+    pub fn new(tx: Sender<GrpcServerMessage>) -> Self {
         Self {
             transmitter: Some(tx),
         }
     }
 
-    async fn send_message(&self, message: Commands) -> Result<(), Box<dyn Error>> {
+    async fn send_message(&self, command: Commands) -> Result<(), Box<dyn Error>> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let message = GrpcServerMessage {
+            command,
+            responder: resp_tx,
+        };
+
         if let Some(tx) = &self.transmitter {
             tx.send(message).await?;
+
+            let response = resp_rx.await?;
+
+            return Ok(response);
         }
 
         Ok(())
     }
 
-    pub async fn serve(tx: Sender<Commands>) -> Result<(), Box<dyn Error>> {
-        println!("Starting server on: \"{}\"", CONFIG.address.to_string());
+    pub async fn serve(
+        address: SocketAddr,
+        tx: Sender<GrpcServerMessage>,
+    ) -> Result<(), Box<dyn Error>> {
+        println!("Starting server on: \"{}\"", address.to_string());
 
         Server::builder()
             .add_service(JunoServicesServer::new(GRPCServer::new(tx)))
-            .serve(CONFIG.address)
+            .serve(address)
             .await?;
 
         Ok(())
@@ -63,9 +86,9 @@ impl JunoServices for GRPCServer {
         let path = PathBuf::from_str(request.into_inner().path.as_str())
             .expect("Failed to create pathbuf");
 
-        let files = match file_explorer::walk_dir(Some(&path)) {
-            Ok(files) => files,
-            Err(err) => return Err(Status::invalid_argument(err)),
+        let files: Vec<PathBuf> = match self.send_message(Commands::GetFiles { path }).await {
+            Ok(()) => vec![],
+            Err(_err) => return Err(Status::internal("An internal error has occurred.")),
         };
 
         let reply = GetFilesResponse {

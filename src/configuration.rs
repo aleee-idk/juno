@@ -1,14 +1,9 @@
 use clap::{Parser, Subcommand};
-use lazy_static::lazy_static;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::grpc;
-
-lazy_static! {
-    pub static ref CONFIG: Config = Config::new();
-}
 
 #[derive(Debug)]
 pub enum ConfigMode {
@@ -22,6 +17,12 @@ pub enum Commands {
     Start {
         #[arg(help = "Directory to scan for files", default_value = ".")]
         base_path: PathBuf,
+        #[arg(
+            long,
+            help = "The value 1.0 is the “normal” volume. Any value other than 1.0 will multiply each sample by this value.",
+            default_value = "1.0"
+        )]
+        volume: f32,
     },
     /// Resume the playback
     Play,
@@ -52,13 +53,6 @@ struct Args {
 
     #[arg(short, long, help = "the port to bind to", default_value = "50051")]
     port: u16,
-
-    #[arg(
-        long,
-        help = "The value 1.0 is the “normal” volume. Any value other than 1.0 will multiply each sample by this value.",
-        default_value = "1.0"
-    )]
-    volume: f32,
 }
 
 #[derive(Debug)]
@@ -85,7 +79,6 @@ impl Config {
 
         let mut config = Self::default();
         config.address = SocketAddr::from_str(format!("[::1]:{}", cli.port).as_str()).unwrap();
-        config.volume = cli.volume;
         config.command = cli.cmd;
 
         if grpc::is_socket_in_use(config.address) {

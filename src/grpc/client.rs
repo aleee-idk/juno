@@ -1,6 +1,6 @@
-use core::panic;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 
-use crate::configuration::{Commands, CONFIG};
 use crate::grpc::grpc_juno::EmptyRequest;
 
 use super::grpc_juno;
@@ -10,13 +10,19 @@ use grpc_juno::GetFilesRequest;
 use tonic::transport::Channel;
 use tonic::Request;
 
-#[derive(Debug, Default)]
-pub struct GRPCClient {}
+#[derive(Debug)]
+pub struct GRPCClient {
+    address: SocketAddr,
+}
 
 impl GRPCClient {
+    pub fn new(address: SocketAddr) -> Self {
+        Self { address }
+    }
+
     async fn get_client(&self) -> Result<JunoServicesClient<Channel>, Box<dyn std::error::Error>> {
         let client =
-            JunoServicesClient::connect(format!("http://{}", CONFIG.address.to_string())).await?;
+            JunoServicesClient::connect(format!("http://{}", self.address.to_string())).await?;
 
         Ok(client)
     }
@@ -81,21 +87,17 @@ impl GRPCClient {
         Ok(())
     }
 
-    pub async fn get_files(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn get_files(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let mut client = self.get_client().await?;
 
-        if let Commands::GetFiles { path } = &CONFIG.command {
-            let request = Request::new(GetFilesRequest {
-                path: path.display().to_string(),
-            });
+        let request = Request::new(GetFilesRequest {
+            path: path.display().to_string(),
+        });
 
-            let response = client.get_files(request).await?.into_inner();
+        let response = client.get_files(request).await?.into_inner();
 
-            println!("RESPONSE={:?}", response.files);
+        println!("RESPONSE={:?}", response.files);
 
-            return Ok(());
-        };
-
-        panic!("Error");
+        return Ok(());
     }
 }

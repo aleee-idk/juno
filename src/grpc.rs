@@ -1,11 +1,10 @@
 use std::net::{SocketAddr, TcpListener};
 
-
 pub use self::client::GRPCClient;
 pub use self::server::GRPCServer;
 
 mod client;
-mod server;
+pub mod server;
 
 pub mod grpc_juno {
     tonic::include_proto!("juno");

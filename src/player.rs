@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use rodio::{OutputStream, Sink};
 
-use crate::configuration::{self, CONFIG};
+use crate::configuration;
 use crate::file_explorer::walk_dir;
 
 #[allow(dead_code)]
@@ -14,6 +14,7 @@ pub struct Player {
     queue: VecDeque<PathBuf>,
     sink: Sink,
     stream: OutputStream,
+    base_dir: PathBuf,
 }
 
 impl std::ops::Deref for Player {
@@ -25,17 +26,18 @@ impl std::ops::Deref for Player {
 }
 
 impl Player {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        let queue = walk_dir(None)?;
+    pub fn new(base_dir: PathBuf, volume: f32) -> Result<Self, Box<dyn Error>> {
+        let queue = walk_dir(&base_dir)?;
         // stream needs to exist as long as sink to work
         let (stream, stream_handle) = OutputStream::try_default()?;
         let sink = Sink::try_new(&stream_handle)?;
-        sink.set_volume(CONFIG.volume);
+        sink.set_volume(volume);
 
         Ok(Player {
             queue: VecDeque::from(queue),
             sink,
             stream,
+            base_dir,
         })
     }
 
@@ -78,6 +80,10 @@ impl Player {
         self.enqueue_file(file_path)?;
 
         Ok(())
+    }
+
+    fn get_files(path: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        Ok(walk_dir(&path)?)
     }
 
     fn play(&mut self) {
