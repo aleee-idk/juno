@@ -41,24 +41,6 @@ impl Player {
         })
     }
 
-    pub fn handle_message(
-        &mut self,
-        message: configuration::Commands,
-    ) -> Result<(), Box<dyn Error>> {
-        match message {
-            configuration::Commands::Play => self.play(),
-            configuration::Commands::Pause => self.pause(),
-            configuration::Commands::PlayPause => self.play_pause(),
-            configuration::Commands::SkipSong => self.skip_song()?,
-            configuration::Commands::Set => todo!(),
-            _ => {
-                println!("This command doesn't apply to client mode")
-            }
-        };
-
-        Ok(())
-    }
-
     pub fn handle_idle(&mut self) -> Result<(), Box<dyn Error>> {
         if self.sink.is_paused() {
             return Ok(());
@@ -82,19 +64,44 @@ impl Player {
         Ok(())
     }
 
-    fn get_files(path: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-        Ok(walk_dir(&path)?)
+    pub fn get_files(&mut self, path: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        // let mut base_path = env::current_dir().expect("Error accesing the enviroment");
+        //
+        // match path {
+        //     Some(dir) => {
+        //     }
+        //     None => search_path = base_path.to_owned(),
+        // }
+        //
+        // // PathBuf.join() can override the hole path, this ensure we're not accessing files outside
+        // // base_dir
+        // if !search_path.starts_with(base_path) {
+        //     return Err("Tried to access file or directory outside of server `base_path` config.");
+        // }
+
+        let search_path = self
+            .base_dir
+            .join(path)
+            .canonicalize()
+            .expect("Couldn't canonicalizice the path");
+
+        // PathBuf.join() can override the hole path, this ensure we're not accessing files outside base_dir
+        if !search_path.starts_with(&self.base_dir) {
+            panic!("Tried to access file or directory outside of server `base_path` config.")
+        }
+
+        Ok(walk_dir(&search_path)?)
     }
 
-    fn play(&mut self) {
+    pub fn play(&mut self) {
         self.sink.play();
     }
 
-    fn pause(&mut self) {
+    pub fn pause(&mut self) {
         self.sink.pause();
     }
 
-    fn play_pause(&self) {
+    pub fn play_pause(&self) {
         if self.sink.is_paused() {
             self.sink.play();
         } else {
@@ -102,7 +109,7 @@ impl Player {
         };
     }
 
-    fn skip_song(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn skip_song(&mut self) -> Result<(), Box<dyn Error>> {
         println!("Skipping current song...:");
         let file_path = self.queue.pop_front().expect("foo");
         self.enqueue_file(file_path)?;

@@ -14,10 +14,26 @@ use tonic::{Request, Response, Result, Status};
 
 type Responder<T> = oneshot::Sender<T>;
 
-#[derive(Debug)]
-pub struct GrpcServerMessage {
-    pub command: Commands,
-    pub responder: Responder<()>,
+pub enum GrpcServerMessage {
+    Play {
+        resp: Responder<Result<()>>,
+    },
+    Pause {
+        resp: Responder<Result<()>>,
+    },
+    PlayPause {
+        resp: Responder<Result<()>>,
+    },
+    SkipSong {
+        resp: Responder<Result<(), String>>,
+    },
+    Set {
+        resp: Responder<Result<()>>,
+    },
+    GetFiles {
+        path: PathBuf,
+        resp: Responder<Vec<PathBuf>>,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -30,25 +46,6 @@ impl GRPCServer {
         Self {
             transmitter: Some(tx),
         }
-    }
-
-    async fn send_message(&self, command: Commands) -> Result<(), Box<dyn Error>> {
-        let (resp_tx, resp_rx) = oneshot::channel();
-
-        let message = GrpcServerMessage {
-            command,
-            responder: resp_tx,
-        };
-
-        if let Some(tx) = &self.transmitter {
-            tx.send(message).await?;
-
-            let response = resp_rx.await?;
-
-            return Ok(response);
-        }
-
-        Ok(())
     }
 
     pub async fn serve(
@@ -86,10 +83,24 @@ impl JunoServices for GRPCServer {
         let path = PathBuf::from_str(request.into_inner().path.as_str())
             .expect("Failed to create pathbuf");
 
-        let files: Vec<PathBuf> = match self.send_message(Commands::GetFiles { path }).await {
-            Ok(()) => vec![],
-            Err(_err) => return Err(Status::internal("An internal error has occurred.")),
-        };
+        let mut files: Vec<PathBuf> = vec![];
+
+        if let Some(tx) = &self.transmitter {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let message = GrpcServerMessage::GetFiles {
+                resp: resp_tx,
+                path,
+            };
+
+            if let Err(_err) = tx.send(message).await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
+
+            files = match resp_rx.await {
+                Ok(response) => response,
+                Err(_err) => return Err(Status::internal("An internal error has occurred.")),
+            };
+        }
 
         let reply = GetFilesResponse {
             files: files.iter().map(|x| x.display().to_string()).collect(),
@@ -102,8 +113,17 @@ impl JunoServices for GRPCServer {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        if let Err(_err) = self.send_message(Commands::Play).await {
-            return Err(Status::internal("An internal error has occurred."));
+        if let Some(tx) = &self.transmitter {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let message = GrpcServerMessage::Play { resp: resp_tx };
+
+            if let Err(_err) = tx.send(message).await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
+
+            if let Err(_err) = resp_rx.await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
         }
 
         Ok(Response::new(EmptyResponse {}))
@@ -113,8 +133,17 @@ impl JunoServices for GRPCServer {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        if let Err(_err) = self.send_message(Commands::Pause).await {
-            return Err(Status::internal("An internal error has occurred."));
+        if let Some(tx) = &self.transmitter {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let message = GrpcServerMessage::Pause { resp: resp_tx };
+
+            if let Err(_err) = tx.send(message).await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
+
+            if let Err(_err) = resp_rx.await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
         }
 
         Ok(Response::new(EmptyResponse {}))
@@ -124,8 +153,17 @@ impl JunoServices for GRPCServer {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        if let Err(_err) = self.send_message(Commands::PlayPause).await {
-            return Err(Status::internal("An internal error has occurred."));
+        if let Some(tx) = &self.transmitter {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let message = GrpcServerMessage::PlayPause { resp: resp_tx };
+
+            if let Err(_err) = tx.send(message).await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
+
+            if let Err(_err) = resp_rx.await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
         }
 
         Ok(Response::new(EmptyResponse {}))
@@ -135,8 +173,17 @@ impl JunoServices for GRPCServer {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        if let Err(_err) = self.send_message(Commands::SkipSong).await {
-            return Err(Status::internal("An internal error has occurred."));
+        if let Some(tx) = &self.transmitter {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let message = GrpcServerMessage::SkipSong { resp: resp_tx };
+
+            if let Err(_err) = tx.send(message).await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
+
+            if let Err(_err) = resp_rx.await {
+                return Err(Status::internal("An internal error has occurred."));
+            }
         }
 
         Ok(Response::new(EmptyResponse {}))

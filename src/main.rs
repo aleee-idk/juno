@@ -8,11 +8,40 @@ use tokio::sync::mpsc;
 use crate::player::Player;
 
 use self::configuration::{Commands, Config, ConfigMode};
+use self::grpc::server::GrpcServerMessage;
 
 mod configuration;
 mod file_explorer;
 mod grpc;
 mod player;
+
+async fn handle_message(player: &mut Player, message: GrpcServerMessage) {
+    match message {
+        GrpcServerMessage::Play { resp } => {
+            player.play();
+            let _ = resp.send(Ok(()));
+        }
+        GrpcServerMessage::Pause { resp } => {
+            player.pause();
+            let _ = resp.send(Ok(()));
+        }
+        GrpcServerMessage::PlayPause { resp } => {
+            player.play_pause();
+            let _ = resp.send(Ok(()));
+        }
+        GrpcServerMessage::SkipSong { resp } => {
+            let _ = match player.skip_song() {
+                Ok(_) => resp.send(Ok(())),
+                Err(err) => resp.send(Err(err.to_string())),
+            };
+        }
+        GrpcServerMessage::Set { resp } => todo!(),
+        GrpcServerMessage::GetFiles { path, resp } => {
+            let files = player.get_files(&path).unwrap();
+            let _ = resp.send(files);
+        }
+    }
+}
 
 async fn init_server(config: Config) -> Result<(), Box<dyn Error>> {
     let (tx, mut rx) = mpsc::channel::<grpc::server::GrpcServerMessage>(32);
@@ -42,15 +71,7 @@ async fn init_server(config: Config) -> Result<(), Box<dyn Error>> {
     loop {
         tokio::select! {
             Some(msg) = rx.recv() => {
-                // TODO: receive message from player and send it back to server so it can be sent to
-                // the client
-                if let Err(err) = player.handle_message(msg.command) {
-                    eprintln!("Error handling player action: {}", err);
-                }
-
-                if let Err(_) = msg.responder.send(()) {
-                    eprintln!("Error responding to grpc server");
-                }
+                handle_message(&mut player, msg).await;
             }
             _ = async {
                     loop {
