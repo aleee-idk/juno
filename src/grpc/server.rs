@@ -1,4 +1,3 @@
-use crate::configuration::Commands;
 
 use super::grpc_juno;
 use grpc_juno::juno_services_server::{JunoServices, JunoServicesServer};

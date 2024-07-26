@@ -35,7 +35,9 @@ async fn handle_message(player: &mut Player, message: GrpcServerMessage) {
                 Err(err) => resp.send(Err(err.to_string())),
             };
         }
-        GrpcServerMessage::Set { resp } => todo!(),
+        GrpcServerMessage::Set { resp } => {
+            let _ = resp.send(Ok(()));
+        }
         GrpcServerMessage::GetFiles { path, resp } => {
             let files = player.get_files(&path).unwrap();
             let _ = resp.send(files);

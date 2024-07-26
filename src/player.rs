@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use rodio::{OutputStream, Sink};
 
-use crate::configuration;
 use crate::file_explorer::walk_dir;
 
 #[allow(dead_code)]
