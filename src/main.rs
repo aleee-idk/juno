@@ -8,14 +8,15 @@ use tokio::sync::mpsc;
 use crate::player::Player;
 
 use self::configuration::{Commands, Config, ConfigMode};
+use self::file_handler::{FileExplorer, LocalFileSystem};
 use self::grpc::server::GrpcServerMessage;
 
 mod configuration;
-mod file_explorer;
+mod file_handler;
 mod grpc;
 mod player;
 
-async fn handle_message(player: &mut Player, message: GrpcServerMessage) {
+async fn handle_message<T: FileExplorer>(player: &mut Player<T>, message: GrpcServerMessage) {
     match message {
         GrpcServerMessage::Play { resp } => {
             player.play();
@@ -64,7 +65,9 @@ async fn init_server(config: Config) -> Result<(), Box<dyn Error>> {
         volume = config_volume;
     };
 
-    let mut player = Player::new(base_path, volume).expect("Error creating player");
+    let mut player = Player::new(LocalFileSystem, base_path).expect("Error creating player");
+
+    player.set_volume(volume);
 
     println!("Listening for incomming messages...");
 
